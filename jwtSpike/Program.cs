@@ -10,9 +10,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
-//var a = new JwtSecurityTokenHandler().WriteToken(GetToken(builder.Configuration["JWT:Secret"]));
+var a = new JwtSecurityTokenHandler().WriteToken(GetToken(builder.Configuration["JWT:Secret"]));
 
 
+builder.Services.AddAuthorization();
 
 builder.Services.AddAuthentication(options =>
 {
@@ -26,9 +27,11 @@ builder.Services.AddAuthentication(options =>
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
-        ValidAudience = "https://localhost:7205",
+        ValidAudience = "vonat",
         ValidateAudience = true,
+        ValidateLifetime = true,
         ValidIssuer = "https://localhost:7205",
+        ValidateIssuerSigningKey = true,
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Secret"]))
     };
 });
@@ -54,7 +57,7 @@ static JwtSecurityToken GetToken(string secret)
 
     var token = new JwtSecurityToken(
         issuer: "https://localhost:7205",
-        audience: "https://localhost:7205",
+        audience: "vonat",
         expires: DateTime.Now.AddHours(3),
         signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256),
         claims: new []{ new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()) }
