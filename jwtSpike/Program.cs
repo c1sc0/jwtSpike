@@ -39,6 +39,8 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+builder.Services.AddMemoryCache();
+
 builder.Services.AddDbContext<JwtDbContext>(options => options.UseSqlServer(@"Data Source=(LocalDb)\MSSQLLocalDB;Initial Catalog=jwt;Integrated Security=True;"));
 
 var app = builder.Build();
@@ -65,7 +67,7 @@ static JwtSecurityToken GetToken(string secret, string username)
         audience: "test",
         expires: DateTime.Now.AddMinutes(1),
         signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256),
-        claims: new []{ new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()), new Claim(JwtRegisteredClaimNames.Name, "test") }
+        claims: new []{ new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()), new Claim(JwtRegisteredClaimNames.Name, username) }
     );
 
     return token;

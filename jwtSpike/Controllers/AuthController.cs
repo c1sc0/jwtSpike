@@ -2,9 +2,12 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using jwtSpike.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.IdentityModel.Tokens;
+using Newtonsoft.Json;
 
 namespace jwtSpike.Controllers;
 
@@ -15,12 +18,56 @@ public class AuthController : ControllerBase
     private readonly IConfiguration _configuration;
     private readonly JwtDbContext _jwtDbContext;
     private readonly ILogger _logger;
+    private readonly IMemoryCache _memoryCache;
 
-    public AuthController(ILogger<AuthController> logger, JwtDbContext jwtDbContext, IConfiguration configuration)
+    public AuthController(ILogger<AuthController> logger, JwtDbContext jwtDbContext, IConfiguration configuration, IMemoryCache memoryCache)
     {
         _logger = logger;
         _jwtDbContext = jwtDbContext;
         _configuration = configuration;
+        _memoryCache = memoryCache;
+    }
+
+    [HttpPost]
+    [Route("login")]
+    public async Task<IActionResult> Login(UserDto userDto, CancellationToken cancellationToken)
+    {
+
+        var userFromExternalDb = new { Username = "user", Password = "password" };
+
+        if (userDto.Username != userFromExternalDb.Username || userDto.Password != userFromExternalDb.Password)
+        {
+            _logger.LogWarning($"Bad username or password {JsonConvert.SerializeObject(userDto)} ({Request.HttpContext.Connection.RemoteIpAddress})");
+            return BadRequest("Bad username or password.");
+        }
+
+        var newAccessToken = CreateAccessToken(new List<Claim> { new(JwtRegisteredClaimNames.Name, userDto.Username) });
+        var newRefreshToken = GenerateRefreshToken();
+
+        // Use key value store instead of db.
+        var user = await _jwtDbContext.Users.FirstOrDefaultAsync(_ => _.Name == userDto.Username, cancellationToken);
+
+        if (user == null)
+        {
+            user = new User
+            {
+                Id = new Guid(),
+                Name = userDto.Username,
+                RefreshToken = newRefreshToken,
+                RefreshTokenExpiryTime = DateTime.Now.AddDays(3)
+            };
+            await _jwtDbContext.Users.AddAsync(user, cancellationToken);
+        }
+
+        user.RefreshToken = newRefreshToken;
+        user.RefreshTokenExpiryTime = DateTime.Now.AddDays(3);
+        await _jwtDbContext.SaveChangesAsync(cancellationToken);
+
+        return new JsonResult(new
+        {
+            accessToken = new JwtSecurityTokenHandler().WriteToken(newAccessToken),
+            refreshToken = newRefreshToken
+        });
     }
 
     [HttpPost]
