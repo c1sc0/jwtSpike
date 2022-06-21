@@ -12,8 +12,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
-var a = new JwtSecurityTokenHandler().WriteToken(GetToken(builder.Configuration["JWT:Secret"], "test"));
-
 
 builder.Services.AddAuthorization();
 
@@ -58,17 +56,4 @@ app.MapControllers();
 
 app.Run();
 
-static JwtSecurityToken GetToken(string secret, string username)
-{
-    var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
 
-    var token = new JwtSecurityToken(
-        issuer: "https://localhost:7205",
-        audience: "test",
-        expires: DateTime.Now.AddMinutes(1),
-        signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256),
-        claims: new []{ new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()), new Claim(JwtRegisteredClaimNames.Name, username) }
-    );
-
-    return token;
-}

@@ -130,6 +130,7 @@ public class AuthController : ControllerBase
         var token = new JwtSecurityToken(
             "https://localhost:7205",
             expires: DateTime.Now.AddMinutes(1),
+            audience: "test",
             signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256),
             claims: claims
         );
