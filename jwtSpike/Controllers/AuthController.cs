@@ -33,9 +33,9 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Login(UserDto userDto, CancellationToken cancellationToken)
     {
 
-        var userFromExternalDb = new { Username = "user", Password = "password" };
+        var user = await _jwtDbContext.Users.FirstOrDefaultAsync(_ => _.Name == userDto.Username, cancellationToken); // move this and 
 
-        if (userDto.Username != userFromExternalDb.Username || userDto.Password != userFromExternalDb.Password)
+        if (user == null || !CryptoHelper.VerifyPassword(user.Password, userDto.Password)) // this to userService
         {
             _logger.LogWarning($"Bad username or password {JsonConvert.SerializeObject(userDto)} ({Request.HttpContext.Connection.RemoteIpAddress})");
             return BadRequest("Bad username or password.");
@@ -45,19 +45,6 @@ public class AuthController : ControllerBase
         var newRefreshToken = GenerateRefreshToken();
 
         // Use key value store instead of db.
-        var user = await _jwtDbContext.Users.FirstOrDefaultAsync(_ => _.Name == userDto.Username, cancellationToken);
-
-        if (user == null)
-        {
-            user = new User
-            {
-                Id = new Guid(),
-                Name = userDto.Username,
-                RefreshToken = newRefreshToken,
-                RefreshTokenExpiryTime = DateTime.Now.AddDays(3)
-            };
-            await _jwtDbContext.Users.AddAsync(user, cancellationToken);
-        }
 
         user.RefreshToken = newRefreshToken;
         user.RefreshTokenExpiryTime = DateTime.Now.AddDays(3);
