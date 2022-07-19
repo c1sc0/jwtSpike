@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text;
 using jwtSpike;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
@@ -40,6 +41,14 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddMemoryCache();
 
 builder.Services.AddDbContext<JwtDbContext>(options => options.UseSqlServer(@"Data Source=(LocalDb)\MSSQLLocalDB;Initial Catalog=jwt;Integrated Security=True;"));
+
+builder.Services.AddApiVersioning(options =>
+{
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.ReportApiVersions = true;
+    options.DefaultApiVersion = ApiVersion.Default;
+});
+
 
 var app = builder.Build();
 

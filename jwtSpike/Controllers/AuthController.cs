@@ -2,7 +2,6 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using jwtSpike.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -20,7 +19,8 @@ public class AuthController : ControllerBase
     private readonly ILogger _logger;
     private readonly IMemoryCache _memoryCache;
 
-    public AuthController(ILogger<AuthController> logger, JwtDbContext jwtDbContext, IConfiguration configuration, IMemoryCache memoryCache)
+    public AuthController(ILogger<AuthController> logger, JwtDbContext jwtDbContext, IConfiguration configuration,
+        IMemoryCache memoryCache)
     {
         _logger = logger;
         _jwtDbContext = jwtDbContext;
@@ -32,16 +32,21 @@ public class AuthController : ControllerBase
     [Route("login")]
     public async Task<IActionResult> Login(UserDto userDto, CancellationToken cancellationToken)
     {
-
-        var user = await _jwtDbContext.Users.FirstOrDefaultAsync(_ => _.Name == userDto.Username, cancellationToken); // move this and 
+        var user = await _jwtDbContext.Users.FirstOrDefaultAsync(_ => _.Name == userDto.Username,
+            cancellationToken); // move this and 
 
         if (user == null || !CryptoHelper.VerifyPassword(user.Password, userDto.Password)) // this to userService
         {
-            _logger.LogWarning($"Bad username or password {JsonConvert.SerializeObject(userDto)} ({Request.HttpContext.Connection.RemoteIpAddress})");
+            _logger.LogWarning(
+                $"Bad username or password {JsonConvert.SerializeObject(userDto)} ({Request.HttpContext.Connection.RemoteIpAddress})");
             return BadRequest("Bad username or password.");
         }
 
-        var newAccessToken = CreateAccessToken(new List<Claim> { new(JwtRegisteredClaimNames.Name, userDto.Username) });
+        var newAccessToken = CreateAccessToken(new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Name, userDto.Username), new(ClaimTypes.Role, "admin"),
+            new(ClaimTypes.Role, "valamiRandomRole")
+        });
         var newRefreshToken = GenerateRefreshToken();
 
         // Use key value store instead of db.
